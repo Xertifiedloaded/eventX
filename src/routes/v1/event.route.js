@@ -6,8 +6,6 @@ const eventController = require('../../controllers/event.controller');
 const eventValidation = require('../../validations/event.validation');
 
 const router = express.Router();
-
-
 router.get(
     '/',
     validate(eventValidation.getEvents),

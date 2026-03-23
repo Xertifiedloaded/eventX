@@ -19,7 +19,7 @@ const envVarsSchema = Joi.object({
   SMTP_PASSWORD: Joi.string().description('SMTP server password'),
   EMAIL_FROM: Joi.string().description('The "from" field in emails sent by the app'),
 
-  GOOGLEMAP_API_KEY: Joi.string().required().description('Google Maps API key'),
+  GOOGLEMAP_API_KEY: Joi.string().allow('').default('').description('Google Maps API key'),
 }).unknown();
 
 const { value: envVars, error } = envVarsSchema.prefs({ errors: { label: 'key' } }).validate(process.env);
@@ -54,6 +54,6 @@ module.exports = {
     from: envVars.EMAIL_FROM,
   },
   googleMaps: {
-    apiKey: envVars.GOOGLEMAP_API_KEY,
+    apiKey: envVars.GOOGLEMAP_API_KEY || null,
   },
 };

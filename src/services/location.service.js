@@ -9,7 +9,19 @@ const MAPS_BASE_URL = 'https://maps.googleapis.com/maps/api';
 const GOOGLE_API_KEY = config.googleMaps.apiKey;
 
 
+const requireMapsKey = () => {
+  if (!GOOGLE_API_KEY) {
+    throw new ApiError(
+      httpStatus.SERVICE_UNAVAILABLE,
+      'Google Maps integration is not configured on this server.'
+    );
+  }
+};
+
+
 const mapsRequest = async (endpoint, params = {}) => {
+  requireMapsKey();
+
   try {
     const { data } = await axios.get(`${MAPS_BASE_URL}/${endpoint}/json`, {
       params: { ...params, key: GOOGLE_API_KEY },
@@ -31,6 +43,7 @@ const mapsRequest = async (endpoint, params = {}) => {
   }
 };
 
+// ─── Geocoding ────────────────────────────────────────────────────────────────
 
 const geocodeAddress = async (address) => {
   const data = await mapsRequest('geocode', { address });
@@ -89,10 +102,13 @@ const getNearbyPlaces = async ({ lat, lng, radius, type }) => {
   }));
 };
 
-// ─── Static map URL ───────────────────────────────────────────────────────────
 
 const buildStaticMapUrl = (location) => {
-  const { lat, lng } = location.coordinates;
+  if (!GOOGLE_API_KEY) return null;
+
+  const { lat, lng } = location.coordinates ?? {};
+  if (!lat || !lng) return null;
+
   const params = new URLSearchParams({
     center: `${lat},${lng}`,
     zoom: '15',
@@ -101,6 +117,7 @@ const buildStaticMapUrl = (location) => {
     markers: `color:red|label:E|${lat},${lng}`,
     key: GOOGLE_API_KEY,
   });
+
   return `${MAPS_BASE_URL}/staticmap?${params.toString()}`;
 };
 
@@ -119,18 +136,21 @@ const createLocation = async (locationBody) => {
         'Either coordinates (lat/lng) or an address must be provided'
       );
     }
-    const geo = await geocodeAddress(address);
-    coordinates = { lat: geo.lat, lng: geo.lng };
-    formattedAddress = geo.formattedAddress;
-    placeId = placeId || geo.placeId;
+
+    if (GOOGLE_API_KEY) {
+      const geo = await geocodeAddress(address);
+      coordinates = { lat: geo.lat, lng: geo.lng };
+      formattedAddress = geo.formattedAddress;
+      placeId = placeId || geo.placeId;
+    }
   }
 
   return Location.create({
     ...rest,
     organizer: organizerId,
     address: formattedAddress,
-    placeId,
-    coordinates,
+    ...(placeId ? { placeId } : {}),
+    ...(coordinates.lat && coordinates.lng ? { coordinates } : {}),
   });
 };
 
@@ -143,8 +163,8 @@ const updateLocationById = async (locationId, organizerId, updateBody) => {
     throw new ApiError(httpStatus.NOT_FOUND, 'Location not found or access denied');
   }
 
-  // Re-geocode if address changed and no explicit coords passed
-  if (updateBody.address && !updateBody.lat && !updateBody.lng) {
+
+  if (updateBody.address && !updateBody.lat && !updateBody.lng && GOOGLE_API_KEY) {
     const geo = await geocodeAddress(updateBody.address);
     updateBody.coordinates = { lat: geo.lat, lng: geo.lng };
     updateBody.address = geo.formattedAddress;
