@@ -1,24 +1,4 @@
-/* eslint-disable no-param-reassign */
-
 const paginate = (schema) => {
-  /**
-   * @typedef {Object} QueryResult
-   * @property {Document[]} results - Results found
-   * @property {number} page - Current page
-   * @property {number} limit - Maximum number of results per page
-   * @property {number} totalPages - Total number of pages
-   * @property {number} totalResults - Total number of documents
-   */
-  /**
-   * Query for documents with pagination
-   * @param {Object} [filter] - Mongo filter
-   * @param {Object} [options] - Query options
-   * @param {string} [options.sortBy] - Sorting criteria using the format: sortField:(desc|asc). Multiple sorting criteria should be separated by commas (,)
-   * @param {string} [options.populate] - Populate data fields. Hierarchy of fields should be separated by (.). Multiple populating criteria should be separated by commas (,)
-   * @param {number} [options.limit] - Maximum number of results per page (default = 10)
-   * @param {number} [options.page] - Current page (default = 1)
-   * @returns {Promise<QueryResult>}
-   */
   schema.statics.paginate = async function (filter, options) {
     let sort = '';
     if (options.sortBy) {
@@ -29,41 +9,55 @@ const paginate = (schema) => {
       });
       sort = sortingCriteria.join(' ');
     } else {
-      sort = 'createdAt';
+      sort = '-createdAt';
     }
 
-    const limit = options.limit && parseInt(options.limit, 10) > 0 ? parseInt(options.limit, 10) : 10;
-    const page = options.page && parseInt(options.page, 10) > 0 ? parseInt(options.page, 10) : 1;
+    const limit = options.limit && parseInt(options.limit, 10) > 0
+      ? parseInt(options.limit, 10)
+      : 10;
+
+    const page = options.page && parseInt(options.page, 10) > 0
+      ? parseInt(options.page, 10)
+      : 1;
+
     const skip = (page - 1) * limit;
 
-    const countPromise = this.countDocuments(filter).exec();
-    let docsPromise = this.find(filter).sort(sort).skip(skip).limit(limit);
+    let docsPromise = this.find(filter)
+      .sort(sort)
+      .skip(skip)
+      .limit(limit);
 
+    // ✅ FIXED POPULATE HANDLING
     if (options.populate) {
-      options.populate.split(',').forEach((populateOption) => {
-        docsPromise = docsPromise.populate(
-          populateOption
-            .split('.')
-            .reverse()
-            .reduce((a, b) => ({ path: b, populate: a }))
-        );
-      });
+      if (typeof options.populate === 'string') {
+        options.populate.split(',').forEach((populateOption) => {
+          docsPromise = docsPromise.populate(populateOption.trim());
+        });
+      } else if (Array.isArray(options.populate)) {
+        options.populate.forEach((pop) => {
+          docsPromise = docsPromise.populate(pop);
+        });
+      } else if (typeof options.populate === 'object') {
+        docsPromise = docsPromise.populate(options.populate);
+      }
     }
 
-    docsPromise = docsPromise.exec();
+    const countPromise = this.countDocuments(filter).exec();
 
-    return Promise.all([countPromise, docsPromise]).then((values) => {
-      const [totalResults, results] = values;
-      const totalPages = Math.ceil(totalResults / limit);
-      const result = {
-        results,
-        page,
-        limit,
-        totalPages,
-        totalResults,
-      };
-      return Promise.resolve(result);
-    });
+    const [totalResults, results] = await Promise.all([
+      countPromise,
+      docsPromise.exec(),
+    ]);
+
+    const totalPages = Math.ceil(totalResults / limit);
+
+    return {
+      results,
+      page,
+      limit,
+      totalPages,
+      totalResults,
+    };
   };
 };
 

@@ -24,7 +24,7 @@ mongoose
     );
 
     server = app.listen(PORT, () => {
-      logger.info(`Server running on port http://${PORT}`);
+      logger.info(`Server running on port http://localhost:${PORT}`);
     });
   })
   .catch((err) => {

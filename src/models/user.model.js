@@ -4,12 +4,13 @@ const bcrypt = require('bcryptjs');
 const { toJSON, paginate } = require('./plugins');
 const { roles } = require('../config/roles');
 
-const userSchema = mongoose.Schema(
+const userSchema = new mongoose.Schema(
   {
     name: {
       type: String,
       required: true,
       trim: true,
+      maxlength: 100,
     },
 
     email: {
@@ -28,16 +29,13 @@ const userSchema = mongoose.Schema(
     password: {
       type: String,
       required: true,
-      trim: true,
       minlength: 8,
       validate(value) {
         if (!value.match(/\d/) || !value.match(/[a-zA-Z]/)) {
-          throw new Error(
-            'Password must contain at least one letter and one number'
-          );
+          throw new Error('Password must contain at least one letter and one number');
         }
       },
-      private: true, // used by toJSON plugin
+      private: true,
     },
 
     role: {
@@ -59,13 +57,12 @@ const userSchema = mongoose.Schema(
 userSchema.plugin(toJSON);
 userSchema.plugin(paginate);
 
+
 userSchema.statics.isEmailTaken = async function (email, excludeUserId) {
-  const user = await this.findOne({
-    email,
-    _id: { $ne: excludeUserId },
-  });
+  const user = await this.findOne({ email, _id: { $ne: excludeUserId } });
   return !!user;
 };
+
 
 userSchema.methods.isPasswordMatch = async function (password) {
   return bcrypt.compare(password, this.password);
@@ -74,7 +71,7 @@ userSchema.methods.isPasswordMatch = async function (password) {
 
 userSchema.pre('save', async function () {
   if (this.isModified('password')) {
-    this.password = await bcrypt.hash(this.password, 8);
+    this.password = await bcrypt.hash(this.password, 10);
   }
 });
 

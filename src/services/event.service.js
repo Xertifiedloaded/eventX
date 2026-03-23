@@ -1,125 +1,169 @@
 const httpStatus = require('http-status');
-const mongoose = require('mongoose');
+const { Event, Location } = require('../models');
 const ApiError = require('../utils/ApiError');
-const { Event, Booking } = require('../models');
+const locationService = require('./location.service');
 
-const createEvent = async (eventBody) => {
-  const event = await Event.create(eventBody);
+const withLocation = async (event) => {
+  await event.populate({
+    path: 'location',
+    select: 'name address coordinates placeId description capacity',
+  });
+
+  if (event.location) {
+    const loc = event.location.toObject ? event.location.toObject() : event.location;
+    loc.staticMapUrl = locationService.buildStaticMapUrl(loc);
+    event.location = loc;
+  }
+
   return event;
 };
 
-const queryEvents = async (filter = {}, options = {}) => {
-  const page = Math.max(parseInt(options.page, 10) || 1, 1);
-  const limit = Math.max(parseInt(options.limit, 10) || 10, 1);
+const resolveLocation = async (location, organizerId) => {
+  if (!location) return null;
 
-  let sort = { createdAt: -1 };
-  if (options.sortBy) {
-    const [field, order] = options.sortBy.split(':');
-    sort = { [field]: order === 'desc' ? -1 : 1 };
+  if (typeof location === 'string') {
+    if (/^[a-fA-F0-9]{24}$/.test(location)) return location;
+    return null;
   }
 
-  const skip = (page - 1) * limit;
+  if (typeof location === 'object') {
+    const loc = await locationService.createLocation({ ...location, organizerId });
+    return loc._id;
+  }
 
-  const [results, total] = await Promise.all([
-    Event.find(filter).populate('organizer', 'name email').sort(sort).limit(limit).skip(skip).exec(),
-    Event.countDocuments(filter).exec(),
-  ]);
+  return null;
+};
 
-  return {
-    results,
-    page,
-    limit,
-    total,
-    pages: Math.ceil(total / limit) || 0,
-  };
+
+const createEvent = async (organizerId, body) => {
+  const { location, ...rest } = body;
+
+  const locationId = await resolveLocation(location, organizerId);
+
+  const event = await Event.create({
+    ...rest,
+    organizer: organizerId,
+    ...(locationId ? { location: locationId } : {}),
+  });
+
+  return withLocation(event);
+};
+
+const queryEvents = async (filter, options) => {
+  const result = await Event.paginate(filter, {
+    ...options,
+    populate: {
+      path: 'location',
+      select: 'name address coordinates placeId',
+    },
+  });
+
+  result.results = result.results.map((event) => {
+    const obj = event.toObject ? event.toObject() : event;
+
+    if (obj.location?.coordinates) {
+      obj.location.staticMapUrl = locationService.buildStaticMapUrl(obj.location);
+    }
+
+    return obj;
+  });
+
+  return result;
 };
 
 const getEventById = async (eventId) => {
-  return Event.findById(eventId).populate('organizer', 'name email').exec();
-};
-
-const updateEventById = async (eventId, updateBody) => {
+  if (!eventId || !/^[a-fA-F0-9]{24}$/.test(eventId)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid event ID format');
+  }
+  
   const event = await Event.findById(eventId);
   if (!event) {
+    return null; 
+  }
+  return withLocation(event);
+};
+
+const updateEventById = async (eventId, organizerId, body) => {
+  if (!eventId || !/^[a-fA-F0-9]{24}$/.test(eventId)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid event ID format');
+  }
+
+  const eventExists = await Event.findById(eventId);
+  if (!eventExists) {
     throw new ApiError(httpStatus.NOT_FOUND, 'Event not found');
   }
-  Object.assign(event, updateBody);
+
+  const event = await Event.findOne({ _id: eventId, organizer: organizerId });
+  if (!event) {
+    throw new ApiError(httpStatus.FORBIDDEN, 'You do not have permission to update this event');
+  }
+
+  const { location, ...rest } = body;
+
+  if (location !== undefined) {
+    const locationId = await resolveLocation(location, organizerId);
+    event.location = locationId;
+  }
+
+  Object.assign(event, rest);
+  await event.save();
+  return withLocation(event);
+};
+
+const setEventLocation = async (eventId, organizerId, locationId) => {
+  const [event, location] = await Promise.all([
+    Event.findOne({ _id: eventId, organizer: organizerId }),
+    Location.findById(locationId),
+  ]);
+
+  if (!event) throw new ApiError(httpStatus.NOT_FOUND, 'Event not found or access denied');
+  if (!location) throw new ApiError(httpStatus.NOT_FOUND, 'Location not found');
+
+  event.location = location._id;
+  await event.save();
+  return withLocation(event);
+};
+
+const removeEventLocation = async (eventId, organizerId) => {
+  const event = await Event.findOne({ _id: eventId, organizer: organizerId });
+  if (!event) throw new ApiError(httpStatus.NOT_FOUND, 'Event not found or access denied');
+
+  event.location = null;
   await event.save();
   return event;
 };
 
-const deleteEventById = async (eventId) => {
-  const event = await Event.findByIdAndDelete(eventId);
-  if (!event) {
-    throw new ApiError(httpStatus.NOT_FOUND, 'Event not found');
+const cancelEvent = async (eventId, organizerId) => {
+  const event = await Event.findOne({ _id: eventId, organizer: organizerId });
+  if (!event) throw new ApiError(httpStatus.NOT_FOUND, 'Event not found or access denied');
+  if (event.status === 'cancelled') {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Event is already cancelled');
   }
+
+  event.status = 'cancelled';
+  await event.save();
   return event;
 };
 
-const getEventsByCategory = async (category, options = {}) => {
-  const filter = { category, visibility: 'public' };
-  return queryEvents(filter, options);
-};
-
-const searchEvents = async (searchQuery, options = {}) => {
-  const q = searchQuery || '';
-  const filter = {
-    $or: [
-      { title: { $regex: q, $options: 'i' } },
-      { description: { $regex: q, $options: 'i' } },
-    ],
-    visibility: 'public',
-  };
-  return queryEvents(filter, options);
-};
-
-const createBooking = async (bookingBody) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-  try {
-    const event = await Event.findById(bookingBody.event).session(session);
-    if (!event) {
-      throw new ApiError(httpStatus.NOT_FOUND, 'Event not found');
-    }
-
-    const ticket = event.ticketTypes.find((t) => t.name === bookingBody.ticketType);
-    if (!ticket) {
-      throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid ticket type');
-    }
-
-    if (ticket.quantity < bookingBody.quantity) {
-      throw new ApiError(httpStatus.BAD_REQUEST, 'Not enough tickets available');
-    }
-    const totalPrice = (ticket.price || 0) * bookingBody.quantity;
-    ticket.quantity -= bookingBody.quantity;
-    await event.save({ session });
-
-    const bookingData = {
-      event: bookingBody.event,
-      user: bookingBody.user,
-      ticketType: ticket.name,
-      quantity: bookingBody.quantity,
-      totalPrice,
-      status: bookingBody.status || 'confirmed',
-    };
-
-    const [booking] = await Booking.create([bookingData], { session });
-
-    await session.commitTransaction();
-    session.endSession();
-
-    return booking;
-  } catch (error) {
-    await session.abortTransaction();
-    session.endSession();
-    throw error;
+const deleteEventById = async (eventId, organizerId) => {
+  if (!eventId || !/^[a-fA-F0-9]{24}$/.test(eventId)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Invalid event ID format');
   }
-};
 
-const getEventPayments = async (eventId) => {
-  const bookings = await Booking.find({ event: eventId }).populate('user', 'name email').exec();
-  const totalRevenue = bookings.reduce((sum, b) => sum + (b.totalPrice || 0), 0);
-  return { bookings, totalRevenue };
+  const eventExists = await Event.findById(eventId);
+  if (!eventExists) {
+    throw new ApiError(httpStatus.NOT_FOUND, 'Event not found');
+  }
+  const event = await Event.findOne({ _id: eventId, organizer: organizerId });
+  if (!event) {
+    throw new ApiError(httpStatus.FORBIDDEN, 'You do not have permission to delete this event');
+  }
+
+  if (!['draft', 'cancelled'].includes(event.status)) {
+    throw new ApiError(httpStatus.BAD_REQUEST, 'Only draft or cancelled events can be deleted');
+  }
+
+  await event.deleteOne();
 };
 
 module.exports = {
@@ -127,9 +171,8 @@ module.exports = {
   queryEvents,
   getEventById,
   updateEventById,
+  setEventLocation,
+  removeEventLocation,
+  cancelEvent,
   deleteEventById,
-  getEventsByCategory,
-  searchEvents,
-  createBooking,
-  getEventPayments,
 };
