@@ -1,8 +1,7 @@
 const allRoles = {
   user: [
-    "getUsers",
-    "manageUsers",
     "getEvents",
+    'editUser',
     "manageEvents",
     "manageLocations",
   ],
@@ -10,6 +9,7 @@ const allRoles = {
     "getUsers",
     "manageUsers",
     "getEvents",
+    'editUser',
     "manageEvents",
     "manageLocations",
   ],

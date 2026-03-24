@@ -24,6 +24,7 @@ const getEventReviews = {
 
 const updateReview = {
   params: Joi.object().keys({
+    eventId: Joi.string().custom(objectId).required(), 
     reviewId: Joi.string().custom(objectId).required(),
   }),
   body: Joi.object()
@@ -36,6 +37,7 @@ const updateReview = {
 
 const deleteReview = {
   params: Joi.object().keys({
+    eventId: Joi.string().custom(objectId).required(), 
     reviewId: Joi.string().custom(objectId).required(),
   }),
 };

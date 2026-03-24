@@ -27,7 +27,7 @@ router
     userController.getUser
   )
   .patch(
-    auth("manageUsers"),
+    auth("editUser"),
     validate(userValidation.updateUser),
     userController.updateUser
   )
