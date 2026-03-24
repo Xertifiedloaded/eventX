@@ -4,3 +4,7 @@ module.exports.reviewValidation = require("./review.validation");
 module.exports.eventValidation = require("./event.validation");
 module.exports.locationValidation = require("./location.validation");
 module.exports.bookingValidation = require("./booking.validation");
+module.exports.analyticsValidation = require("./analytics.validation");
+module.exports.attendeeValidation = require("./attendee.validation");
+module.exports.transferValidation = require("./transfer.validation");
+module.exports.verificationValidation = require("./verification.validation");

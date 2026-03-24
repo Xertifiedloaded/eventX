@@ -2,7 +2,7 @@ const mongoose = require("mongoose");
 const app = require("./app");
 const config = require("./config/config");
 const logger = require("./config/logger");
-
+const { registerReminderJobs } = require("./services/reminder.service");
 let server;
 const PORT = process.env.PORT || config.port || 3000;
 
@@ -29,6 +29,11 @@ mongoose
     logger.error("MongoDB connection error:", err);
     process.exit(1);
   });
+
+mongoose.connection.once("open", () => {
+  console.log("database connected");
+  registerReminderJobs(); 
+});
 
 const exitHandler = () => {
   if (server) {

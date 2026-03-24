@@ -1,2 +1,10 @@
 module.exports.authController = require("./auth.controller");
 module.exports.userController = require("./user.controller");
+module.exports.analyticsController = require("./analytics.controller");
+module.exports.attendeeController = require("./attendee.controller");
+module.exports.locationController = require("./location.controller");
+module.exports.oauthController = require("./oauth.controller");
+module.exports.reviewController = require("./review.controller");
+module.exports.transferController = require("./transfer.controller");
+module.exports.verificationController = require("./verification.controller");
+module.exports.eventController = require("./event.controller");

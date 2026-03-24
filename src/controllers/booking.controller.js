@@ -6,7 +6,7 @@ const bookingService = require("../services/booking.service");
 
 const bookFreeEvent = catchAsync(async (req, res) => {
   const { eventId } = req.params;
-  const { tickets } = req.body; // [{ ticketTypeName, quantity }]
+  const { tickets } = req.body; 
 
   const booking = await bookingService.createFreeBooking(
     req.user.id,

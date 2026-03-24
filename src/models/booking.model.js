@@ -49,15 +49,16 @@ const bookingSchema = new mongoose.Schema(
       index: true,
     },
 
-    // QR / barcode data — a short unique reference the scanner checks
-    bookingReference: {
-      type: String,
-      unique: true,
-      required: true,
-    },
+    bookingReference: { type: String, unique: true, required: true },
     qrCodeImage: { type: String, default: null },
 
     confirmationEmailSentAt: { type: Date, default: null },
+
+    // Check-in / verification
+    checkedIn: { type: Boolean, default: false },
+    checkedInAt: { type: Date, default: null },
+    transferredAt: { type: Date, default: null },
+    transferredFrom: { type: String, default: null },
   },
   { timestamps: true }
 );

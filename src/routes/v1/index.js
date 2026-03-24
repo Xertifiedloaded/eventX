@@ -5,6 +5,10 @@ const eventRoute = require("./event.route");
 const locationRoute = require("./location.route");
 const reviewRoute = require("./review.route");
 const bookingRoute = require("./booking.route");
+const verificationRoute = require("./verification.route");
+const attendeeRoute = require("./attendee.route");
+const analyticsRoute = require("./analytics.route");
+const transferRoute = require("./transfer.route");
 
 const router = express.Router();
 
@@ -14,6 +18,10 @@ const defaultRoutes = [
   { path: "/events", route: eventRoute },
   { path: "/locations", route: locationRoute },
   { path: "/bookings", route: bookingRoute },
+  { path: "/verify", route: verificationRoute },
+  { path: "/analytics", route: analyticsRoute },
+  { path: "/transfer", route: transferRoute },
+  { path: "/events/:eventId/attendees", route: attendeeRoute },
   { path: "/events/:eventId/reviews", route: reviewRoute },
 ];
 
