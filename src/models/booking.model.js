@@ -38,7 +38,6 @@ const bookingSchema = new mongoose.Schema(
     totalAmount: { type: Number, required: true, min: 0 },
     isFreeBooking: { type: Boolean, default: false },
 
-    // Paystack fields (only for paid bookings)
     paystackReference: { type: String, default: null, index: true },
     paystackAccessCode: { type: String, default: null },
 
@@ -49,12 +48,11 @@ const bookingSchema = new mongoose.Schema(
       index: true,
     },
 
-    bookingReference: { type: String, unique: true, required: true },
+    bookingReference: { type: String, required: true }, 
     qrCodeImage: { type: String, default: null },
 
     confirmationEmailSentAt: { type: Date, default: null },
 
-    // Check-in / verification
     checkedIn: { type: Boolean, default: false },
     checkedInAt: { type: Date, default: null },
     transferredAt: { type: Date, default: null },
@@ -64,7 +62,7 @@ const bookingSchema = new mongoose.Schema(
 );
 
 bookingSchema.index({ user: 1, event: 1 });
-bookingSchema.index({ bookingReference: 1 }, { unique: true });
+bookingSchema.index({ bookingReference: 1 }, { unique: true }); 
 
 bookingSchema.plugin(toJSON);
 bookingSchema.plugin(paginate);
