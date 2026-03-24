@@ -1,16 +1,16 @@
-const Joi = require('joi');
-const { objectId } = require('./custom.validation');
+const Joi = require("joi");
+const { objectId } = require("./custom.validation");
 
 const createLocation = {
   body: Joi.object().keys({
     name: Joi.string().trim().max(200).required(),
-    address: Joi.string().trim().when('lat', {
+    address: Joi.string().trim().when("lat", {
       is: Joi.exist(),
       then: Joi.optional(),
       otherwise: Joi.required(),
     }),
     lat: Joi.number().min(-90).max(90),
-    lng: Joi.number().min(-180).max(180).when('lat', {
+    lng: Joi.number().min(-180).max(180).when("lat", {
       is: Joi.exist(),
       then: Joi.required(),
       otherwise: Joi.optional(),
@@ -69,7 +69,7 @@ const getNearbyPlaces = {
     lat: Joi.number().min(-90).max(90).required(),
     lng: Joi.number().min(-180).max(180).required(),
     radius: Joi.number().integer().min(1).max(50000).default(1500),
-    type: Joi.string().default('establishment'),
+    type: Joi.string().default("establishment"),
   }),
 };
 

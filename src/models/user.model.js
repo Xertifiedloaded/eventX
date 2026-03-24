@@ -1,8 +1,8 @@
-const mongoose = require('mongoose');
-const validator = require('validator');
-const bcrypt = require('bcryptjs');
-const { toJSON, paginate } = require('./plugins');
-const { roles } = require('../config/roles');
+const mongoose = require("mongoose");
+const validator = require("validator");
+const bcrypt = require("bcryptjs");
+const { toJSON, paginate } = require("./plugins");
+const { roles } = require("../config/roles");
 
 const userSchema = new mongoose.Schema(
   {
@@ -21,18 +21,19 @@ const userSchema = new mongoose.Schema(
       lowercase: true,
       validate(value) {
         if (!validator.isEmail(value)) {
-          throw new Error('Invalid email');
+          throw new Error("Invalid email");
         }
       },
     },
 
     password: {
       type: String,
-      required: true,
       minlength: 8,
       validate(value) {
-        if (!value.match(/\d/) || !value.match(/[a-zA-Z]/)) {
-          throw new Error('Password must contain at least one letter and one number');
+        if (value && (!value.match(/\d/) || !value.match(/[a-zA-Z]/))) {
+          throw new Error(
+            "Password must contain at least one letter and one number"
+          );
         }
       },
       private: true,
@@ -41,13 +42,26 @@ const userSchema = new mongoose.Schema(
     role: {
       type: String,
       enum: roles,
-      default: 'user',
+      default: "user",
     },
 
     isEmailVerified: {
       type: Boolean,
       default: false,
     },
+
+    oauthProviders: [
+      {
+        provider: {
+          type: String,
+          enum: ["google", "facebook", "github"],
+        },
+        providerId: {
+          type: String,
+        },
+        _id: false,
+      },
+    ],
   },
   {
     timestamps: true,
@@ -57,24 +71,49 @@ const userSchema = new mongoose.Schema(
 userSchema.plugin(toJSON);
 userSchema.plugin(paginate);
 
-
 userSchema.statics.isEmailTaken = async function (email, excludeUserId) {
   const user = await this.findOne({ email, _id: { $ne: excludeUserId } });
   return !!user;
 };
 
+userSchema.statics.findOrCreateOAuthUser = async function ({
+  provider,
+  providerId,
+  email,
+  name,
+}) {
+  let user = await this.findOne({
+    oauthProviders: { $elemMatch: { provider, providerId } },
+  });
+  if (user) return user;
+
+  user = await this.findOne({ email });
+  if (user) {
+    user.oauthProviders.push({ provider, providerId });
+    await user.save();
+    return user;
+  }
+
+  user = await this.create({
+    name,
+    email,
+    isEmailVerified: true,
+    oauthProviders: [{ provider, providerId }],
+  });
+
+  return user;
+};
 
 userSchema.methods.isPasswordMatch = async function (password) {
   return bcrypt.compare(password, this.password);
 };
 
-
-userSchema.pre('save', async function () {
-  if (this.isModified('password')) {
+userSchema.pre("save", async function () {
+  if (this.isModified("password") && this.password) {
     this.password = await bcrypt.hash(this.password, 10);
   }
 });
 
-const User = mongoose.model('User', userSchema);
+const User = mongoose.models.User || mongoose.model("User", userSchema);
 
 module.exports = User;

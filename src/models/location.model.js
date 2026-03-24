@@ -1,5 +1,5 @@
-const mongoose = require('mongoose');
-const { toJSON, paginate } = require('./plugins');
+const mongoose = require("mongoose");
+const { toJSON, paginate } = require("./plugins");
 
 const coordinatesSchema = new mongoose.Schema(
   {
@@ -13,7 +13,7 @@ const locationSchema = new mongoose.Schema(
   {
     organizer: {
       type: mongoose.SchemaTypes.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
       index: true,
     },
@@ -33,7 +33,7 @@ const locationSchema = new mongoose.Schema(
       required: true,
     },
     placeId: {
-      type: String,  
+      type: String,
       trim: true,
     },
     description: {
@@ -55,10 +55,10 @@ const locationSchema = new mongoose.Schema(
   }
 );
 
-locationSchema.index({ coordinates: '2dsphere' });
+locationSchema.index({ coordinates: "2dsphere" });
 locationSchema.plugin(toJSON);
 locationSchema.plugin(paginate);
 
-const Location = mongoose.model('Location', locationSchema);
+const Location = mongoose.model("Location", locationSchema);
 
 module.exports = Location;

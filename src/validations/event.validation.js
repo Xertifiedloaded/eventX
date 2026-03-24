@@ -1,64 +1,94 @@
-const Joi = require('joi');
+const Joi = require("joi");
 const objectId = Joi.string()
   .pattern(/^[a-fA-F0-9]{24}$/)
-  .message('must be a valid ObjectId');
+  .message("must be a valid ObjectId");
 const ticketTypeSchema = Joi.object({
-  name:     Joi.string().trim().required(),
-  price:    Joi.number().min(0).required(),
+  name: Joi.string().trim().required(),
+  price: Joi.number().min(0).required(),
   quantity: Joi.number().integer().min(1).required(),
 });
 const inlineLocationSchema = Joi.object({
-  name:    Joi.string().trim().required(),
+  name: Joi.string().trim().required(),
   address: Joi.string().trim().required(),
-  lat:     Joi.number().min(-90).max(90),
-  lng:     Joi.number().min(-180).max(180),
+  lat: Joi.number().min(-90).max(90),
+  lng: Joi.number().min(-180).max(180),
 });
 
 const createEvent = {
   body: Joi.object()
     .keys({
-      title:           Joi.string().trim().max(300).required(),
-      description:     Joi.string().trim().max(5000).required(),
-      category:        Joi.string()
-                         .valid('music', 'sports', 'technology', 'business', 'arts', 'education', 'other')
-                         .required(),
-      startDateTime:   Joi.date().iso().required(),
-      endDateTime:     Joi.date().iso().greater(Joi.ref('startDateTime')).required()
-                         .messages({ 'date.greater': 'endDateTime must be after startDateTime' }),
-      isFreeEvent:     Joi.alternatives().try(Joi.boolean(), Joi.string().valid('true', 'false')).default(false),
-      isOnlineEvent:   Joi.alternatives().try(Joi.boolean(), Joi.string().valid('true', 'false')).default(false),
-      venueName:       Joi.string().trim().allow('', null),
-      onlineEventLink: Joi.string().uri().trim().allow('', null),
-      location: Joi.alternatives().try(
-        objectId,
-        inlineLocationSchema,
-        Joi.string().trim()   
-      ).allow(null),
-      locationName:    Joi.string().trim().allow('', null),
-      locationAddress: Joi.string().trim().allow('', null),
-      locationLat:     Joi.alternatives().try(Joi.number(), Joi.string()).allow(null),
-      locationLng:     Joi.alternatives().try(Joi.number(), Joi.string()).allow(null),
-      ticketTypes: Joi.alternatives().try(
-        Joi.array().items(ticketTypeSchema),
-        Joi.string().trim()   
-      ).allow(null),
+      title: Joi.string().trim().max(300).required(),
+      description: Joi.string().trim().max(5000).required(),
+      category: Joi.string()
+        .valid(
+          "music",
+          "sports",
+          "technology",
+          "business",
+          "arts",
+          "education",
+          "other"
+        )
+        .required(),
+      startDateTime: Joi.date().iso().required(),
+      endDateTime: Joi.date()
+        .iso()
+        .greater(Joi.ref("startDateTime"))
+        .required()
+        .messages({
+          "date.greater": "endDateTime must be after startDateTime",
+        }),
+      isFreeEvent: Joi.alternatives()
+        .try(Joi.boolean(), Joi.string().valid("true", "false"))
+        .default(false),
+      isOnlineEvent: Joi.alternatives()
+        .try(Joi.boolean(), Joi.string().valid("true", "false"))
+        .default(false),
+      venueName: Joi.string().trim().allow("", null),
+      onlineEventLink: Joi.string().uri().trim().allow("", null),
+      location: Joi.alternatives()
+        .try(objectId, inlineLocationSchema, Joi.string().trim())
+        .allow(null),
+      locationName: Joi.string().trim().allow("", null),
+      locationAddress: Joi.string().trim().allow("", null),
+      locationLat: Joi.alternatives()
+        .try(Joi.number(), Joi.string())
+        .allow(null),
+      locationLng: Joi.alternatives()
+        .try(Joi.number(), Joi.string())
+        .allow(null),
+      ticketTypes: Joi.alternatives()
+        .try(Joi.array().items(ticketTypeSchema), Joi.string().trim())
+        .allow(null),
 
-      visibility: Joi.string().valid('public', 'private').default('public'),
-      status:     Joi.string().valid('draft', 'published', 'cancelled', 'completed').default('draft'),
-
+      visibility: Joi.string().valid("public", "private").default("public"),
+      status: Joi.string()
+        .valid("draft", "published", "cancelled", "completed")
+        .default("draft"),
     })
-    .unknown(false),  
+    .unknown(false),
 };
 const getEvents = {
   query: Joi.object().keys({
-    category:     Joi.string().valid('music', 'sports', 'technology', 'business', 'arts', 'education', 'other'),
-    visibility:   Joi.string().valid('public', 'private'),
-    status:       Joi.string().valid('draft', 'published', 'cancelled', 'completed'),
-    isOnlineEvent: Joi.alternatives().try(Joi.boolean(), Joi.string().valid('true', 'false')),
-    organizer:    objectId,
-    sortBy:       Joi.string(),
-    limit:        Joi.number().integer().min(1).max(100).default(10),
-    page:         Joi.number().integer().min(1).default(1),
+    category: Joi.string().valid(
+      "music",
+      "sports",
+      "technology",
+      "business",
+      "arts",
+      "education",
+      "other"
+    ),
+    visibility: Joi.string().valid("public", "private"),
+    status: Joi.string().valid("draft", "published", "cancelled", "completed"),
+    isOnlineEvent: Joi.alternatives().try(
+      Joi.boolean(),
+      Joi.string().valid("true", "false")
+    ),
+    organizer: objectId,
+    sortBy: Joi.string(),
+    limit: Joi.number().integer().min(1).max(100).default(10),
+    page: Joi.number().integer().min(1).default(1),
   }),
 };
 
@@ -74,36 +104,56 @@ const updateEvent = {
   }),
   body: Joi.object()
     .keys({
-      title:           Joi.string().trim().max(300),
-      description:     Joi.string().trim().max(5000),
-      category:        Joi.string().valid('music', 'sports', 'technology', 'business', 'arts', 'education', 'other'),
-      startDateTime:   Joi.date().iso(),
-      endDateTime:     Joi.date().iso(),
+      title: Joi.string().trim().max(300),
+      description: Joi.string().trim().max(5000),
+      category: Joi.string().valid(
+        "music",
+        "sports",
+        "technology",
+        "business",
+        "arts",
+        "education",
+        "other"
+      ),
+      startDateTime: Joi.date().iso(),
+      endDateTime: Joi.date().iso(),
 
-      isFreeEvent:     Joi.alternatives().try(Joi.boolean(), Joi.string().valid('true', 'false')),
-      isOnlineEvent:   Joi.alternatives().try(Joi.boolean(), Joi.string().valid('true', 'false')),
+      isFreeEvent: Joi.alternatives().try(
+        Joi.boolean(),
+        Joi.string().valid("true", "false")
+      ),
+      isOnlineEvent: Joi.alternatives().try(
+        Joi.boolean(),
+        Joi.string().valid("true", "false")
+      ),
 
-      venueName:       Joi.string().trim().allow('', null),
-      onlineEventLink: Joi.string().uri().trim().allow('', null),
+      venueName: Joi.string().trim().allow("", null),
+      onlineEventLink: Joi.string().uri().trim().allow("", null),
 
-      location: Joi.alternatives().try(
-        objectId,
-        inlineLocationSchema,
-        Joi.string().trim()
-      ).allow(null),
+      location: Joi.alternatives()
+        .try(objectId, inlineLocationSchema, Joi.string().trim())
+        .allow(null),
 
-      locationName:    Joi.string().trim().allow('', null),
-      locationAddress: Joi.string().trim().allow('', null),
-      locationLat:     Joi.alternatives().try(Joi.number(), Joi.string()).allow(null),
-      locationLng:     Joi.alternatives().try(Joi.number(), Joi.string()).allow(null),
+      locationName: Joi.string().trim().allow("", null),
+      locationAddress: Joi.string().trim().allow("", null),
+      locationLat: Joi.alternatives()
+        .try(Joi.number(), Joi.string())
+        .allow(null),
+      locationLng: Joi.alternatives()
+        .try(Joi.number(), Joi.string())
+        .allow(null),
 
-      ticketTypes: Joi.alternatives().try(
-        Joi.array().items(ticketTypeSchema),
-        Joi.string().trim()
-      ).allow(null),
+      ticketTypes: Joi.alternatives()
+        .try(Joi.array().items(ticketTypeSchema), Joi.string().trim())
+        .allow(null),
 
-      visibility: Joi.string().valid('public', 'private'),
-      status:     Joi.string().valid('draft', 'published', 'cancelled', 'completed'),
+      visibility: Joi.string().valid("public", "private"),
+      status: Joi.string().valid(
+        "draft",
+        "published",
+        "cancelled",
+        "completed"
+      ),
     })
     .unknown(false),
 };
@@ -126,21 +176,29 @@ const createInlineLocation = {
 
 const getOrganizerEvents = {
   query: Joi.object().keys({
-    status:     Joi.string().valid('draft', 'published', 'cancelled', 'completed'),
-    category:   Joi.string().valid('music', 'sports', 'technology', 'business', 'arts', 'education', 'other'),
-    visibility: Joi.string().valid('public', 'private'),
-    sortBy:     Joi.string(),
-    limit:      Joi.number().integer().min(1).max(100).default(10),
-    page:       Joi.number().integer().min(1).default(1),
+    status: Joi.string().valid("draft", "published", "cancelled", "completed"),
+    category: Joi.string().valid(
+      "music",
+      "sports",
+      "technology",
+      "business",
+      "arts",
+      "education",
+      "other"
+    ),
+    visibility: Joi.string().valid("public", "private"),
+    sortBy: Joi.string(),
+    limit: Joi.number().integer().min(1).max(100).default(10),
+    page: Joi.number().integer().min(1).default(1),
   }),
 };
 
 module.exports = {
   createEvent,
   getEvents,
-  getEvent:             eventId,
+  getEvent: eventId,
   updateEvent,
-  deleteEvent:          eventId,
+  deleteEvent: eventId,
   setEventLocation,
   createInlineLocation,
   getOrganizerEvents,

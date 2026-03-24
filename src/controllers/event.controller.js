@@ -1,19 +1,20 @@
-const httpStatus = require('http-status');
-const catchAsync = require('../utils/catchAsync');
-const { eventService } = require('../services');
-const ApiError = require('../utils/ApiError');
-const pick = require('../utils/pick');
-
-// ─── Form-data parsers ────────────────────────────────────────────────────────
+const httpStatus = require("http-status");
+const catchAsync = require("../utils/catchAsync");
+const { eventService } = require("../services");
+const ApiError = require("../utils/ApiError");
+const pick = require("../utils/pick");
 
 const parseTicketTypes = (body) => {
   if (!body.ticketTypes) return body;
 
-  if (typeof body.ticketTypes === 'string') {
+  if (typeof body.ticketTypes === "string") {
     try {
       body.ticketTypes = JSON.parse(body.ticketTypes);
     } catch {
-      throw new ApiError(httpStatus.BAD_REQUEST, 'ticketTypes must be a valid JSON array');
+      throw new ApiError(
+        httpStatus.BAD_REQUEST,
+        "ticketTypes must be a valid JSON array"
+      );
     }
   }
 
@@ -29,17 +30,16 @@ const parseTicketTypes = (body) => {
 };
 
 const parseBooleans = (body) => {
-  ['isFreeEvent', 'isOnlineEvent'].forEach((field) => {
+  ["isFreeEvent", "isOnlineEvent"].forEach((field) => {
     if (body[field] !== undefined) {
-      body[field] = body[field] === 'true' || body[field] === true;
+      body[field] = body[field] === "true" || body[field] === true;
     }
   });
   return body;
 };
 
-
 const parseLocation = (body) => {
-  if (typeof body.location === 'string' && body.location.startsWith('{')) {
+  if (typeof body.location === "string" && body.location.startsWith("{")) {
     try {
       body.location = JSON.parse(body.location);
     } catch {
@@ -80,7 +80,6 @@ const buildEventBody = (req) => {
   return body;
 };
 
-
 const createEvent = catchAsync(async (req, res) => {
   const body = buildEventBody(req);
   const event = await eventService.createEvent(req.user.id, body);
@@ -88,8 +87,14 @@ const createEvent = catchAsync(async (req, res) => {
 });
 
 const getEvents = catchAsync(async (req, res) => {
-  const filter = pick(req.query, ['category', 'visibility', 'status', 'isOnlineEvent', 'organizer']);
-  const options = pick(req.query, ['sortBy', 'limit', 'page']);
+  const filter = pick(req.query, [
+    "category",
+    "visibility",
+    "status",
+    "isOnlineEvent",
+    "organizer",
+  ]);
+  const options = pick(req.query, ["sortBy", "limit", "page"]);
   const result = await eventService.queryEvents(filter, options);
   res.send(result);
 });
@@ -97,13 +102,17 @@ const getEvents = catchAsync(async (req, res) => {
 const getEvent = catchAsync(async (req, res) => {
   console.log("[v0] Getting event with ID:", req.params.eventId);
   const event = await eventService.getEventById(req.params.eventId);
-  if (!event) throw new ApiError(httpStatus.NOT_FOUND, 'Event not found');
+  if (!event) throw new ApiError(httpStatus.NOT_FOUND, "Event not found");
   res.send(event);
 });
 
 const updateEvent = catchAsync(async (req, res) => {
   const body = buildEventBody(req);
-  const event = await eventService.updateEventById(req.params.eventId, req.user.id, body);
+  const event = await eventService.updateEventById(
+    req.params.eventId,
+    req.user.id,
+    body
+  );
   res.send(event);
 });
 
@@ -115,9 +124,9 @@ const deleteEvent = catchAsync(async (req, res) => {
 const getOrganizerEvents = catchAsync(async (req, res) => {
   const filter = {
     organizer: req.user.id,
-    ...pick(req.query, ['status', 'category', 'visibility']),
+    ...pick(req.query, ["status", "category", "visibility"]),
   };
-  const options = pick(req.query, ['sortBy', 'limit', 'page']);
+  const options = pick(req.query, ["sortBy", "limit", "page"]);
   const result = await eventService.queryEvents(filter, options);
   res.send(result);
 });
@@ -132,9 +141,13 @@ const setEventLocation = catchAsync(async (req, res) => {
 });
 
 const createInlineLocation = catchAsync(async (req, res) => {
-  const event = await eventService.updateEventById(req.params.eventId, req.user.id, {
-    location: req.body,
-  });
+  const event = await eventService.updateEventById(
+    req.params.eventId,
+    req.user.id,
+    {
+      location: req.body,
+    }
+  );
   res.send(event);
 });
 

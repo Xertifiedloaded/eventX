@@ -1,12 +1,12 @@
-const Joi = require('joi');
-const { password } = require('./custom.validation');
+const Joi = require("joi");
+const { password } = require("./custom.validation");
 
 const register = {
   body: Joi.object().keys({
     name: Joi.string().trim().required(),
     email: Joi.string().trim().email().required(),
     password: Joi.string().custom(password).required(),
-    role: Joi.string().valid('user', 'organizer').default('user'),
+    role: Joi.string().valid("user", "organizer").default("user"),
   }),
 };
 

@@ -1,31 +1,28 @@
-const mongoose = require('mongoose');
-const { toJSON } = require('./plugins');
-const { tokenTypes } = require('../config/tokens');
+const mongoose = require("mongoose");
+const { toJSON, paginate } = require("./plugins");
 
-const tokenSchema = mongoose.Schema(
+const reviewSchema = new mongoose.Schema(
   {
-    token: {
-      type: String,
+    event: {
+      type: mongoose.SchemaTypes.ObjectId,
+      ref: "Event",
       required: true,
-      index: true,
     },
     user: {
       type: mongoose.SchemaTypes.ObjectId,
-      ref: 'User',
+      ref: "User",
       required: true,
     },
-    type: {
+    rating: {
+      type: Number,
+      required: true,
+      min: 1,
+      max: 5,
+    },
+    comment: {
       type: String,
-      enum: [tokenTypes.REFRESH, tokenTypes.RESET_PASSWORD, tokenTypes.VERIFY_EMAIL],
-      required: true,
-    },
-    expires: {
-      type: Date,
-      required: true,
-    },
-    blacklisted: {
-      type: Boolean,
-      default: false,
+      trim: true,
+      maxlength: 1000,
     },
   },
   {
@@ -33,9 +30,11 @@ const tokenSchema = mongoose.Schema(
   }
 );
 
-// add plugin that converts mongoose to json
-tokenSchema.plugin(toJSON);
+reviewSchema.index({ event: 1, user: 1 }, { unique: true });
 
-const Token = mongoose.model('Token', tokenSchema);
+reviewSchema.plugin(toJSON);
+reviewSchema.plugin(paginate);
 
-module.exports = Token;
+const Review = mongoose.model("Review", reviewSchema);
+
+module.exports = Review;

@@ -1,40 +1,72 @@
-const mongoose = require('mongoose');
+const mongoose = require("mongoose");
+const { toJSON, paginate } = require("./plugins");
 
-const bookingSchema = mongoose.Schema(
+const bookedTicketSchema = new mongoose.Schema(
   {
-    event: {
-      type: mongoose.SchemaTypes.ObjectId,
-      ref: 'Event',
-      required: true,
-    },
-    user: {
-      type: mongoose.SchemaTypes.ObjectId,
-      ref: 'User',
-      required: true,
-    },
-    ticketType: {
-      type: String,
-      required: true,
-    },
-    quantity: {
-      type: Number,
-      required: true,
-      min: 1,
-    },
-    totalPrice: {
-      type: Number,
-      required: true,
-      min: 0,
-    },
-    status: {
-      type: String,
-      enum: ['pending', 'confirmed', 'cancelled'],
-      default: 'confirmed',
-    },
+    ticketTypeName: { type: String, required: true },
+    quantity: { type: Number, required: true, min: 1 },
+    unitPrice: { type: Number, required: true, min: 0 },
+    subtotal: { type: Number, required: true, min: 0 },
   },
-  {
-    timestamps: true,
-  }
+  { _id: false }
 );
 
-module.exports = mongoose.model('Booking', bookingSchema);
+const bookingSchema = new mongoose.Schema(
+  {
+    user: {
+      type: mongoose.SchemaTypes.ObjectId,
+      ref: "User",
+      required: true,
+      index: true,
+    },
+    event: {
+      type: mongoose.SchemaTypes.ObjectId,
+      ref: "Event",
+      required: true,
+      index: true,
+    },
+
+    tickets: {
+      type: [bookedTicketSchema],
+      required: true,
+      validate: {
+        validator: (v) => Array.isArray(v) && v.length > 0,
+        message: "At least one ticket must be booked.",
+      },
+    },
+
+    totalAmount: { type: Number, required: true, min: 0 },
+    isFreeBooking: { type: Boolean, default: false },
+
+    // Paystack fields (only for paid bookings)
+    paystackReference: { type: String, default: null, index: true },
+    paystackAccessCode: { type: String, default: null },
+
+    status: {
+      type: String,
+      enum: ["pending_payment", "confirmed", "cancelled", "refunded"],
+      default: "pending_payment",
+      index: true,
+    },
+
+    // QR / barcode data — a short unique reference the scanner checks
+    bookingReference: {
+      type: String,
+      unique: true,
+      required: true,
+    },
+    qrCodeImage: { type: String, default: null },
+
+    confirmationEmailSentAt: { type: Date, default: null },
+  },
+  { timestamps: true }
+);
+
+bookingSchema.index({ user: 1, event: 1 });
+bookingSchema.index({ bookingReference: 1 }, { unique: true });
+
+bookingSchema.plugin(toJSON);
+bookingSchema.plugin(paginate);
+
+const Booking = mongoose.model("Booking", bookingSchema);
+module.exports = Booking;
