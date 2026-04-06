@@ -58,6 +58,7 @@
     "joi": "^17.3.0",
     "jsonwebtoken": "^9.0.3",
     "moment": "^2.24.0",
+    "mongodb-memory-server": "^11.0.1",
     "mongoose": "^9.1.6",
     "morgan": "^1.9.1",
     "multer": "^2.0.2",

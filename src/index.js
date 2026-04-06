@@ -4,7 +4,7 @@ const config = require("./config/config");
 const logger = require("./config/logger");
 const { registerReminderJobs } = require("./services/reminder.service");
 let server;
-const PORT = process.env.PORT || config.port || 3000;
+const PORT = process.env.PORT || config.port || 4500;
 
 mongoose
   .connect(config.mongoose.url, config.mongoose.options)

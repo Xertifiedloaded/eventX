@@ -15,24 +15,26 @@ const verifyCallback =
 
     if (requiredRights.length) {
       const userRights = roleRights.get(user.role) || [];
+
       const hasRequiredRights = requiredRights.every((requiredRight) =>
         userRights.includes(requiredRight)
       );
 
-      if (!hasRequiredRights) {
+      const isOwner =
+        req.params.userId && req.params.userId === user.id;
+
+      if (!hasRequiredRights && !isOwner) {
         return reject(new ApiError(httpStatus.FORBIDDEN, "Forbidden"));
       }
     }
+
     resolve();
   };
 
 const auth =
   (...requiredRights) =>
-  async (req, res, next) => {
-    console.log("Authorization header:", req.headers.authorization);
-    console.log("Required rights:", requiredRights);
-
-    return new Promise((resolve, reject) => {
+  async (req, res, next) =>
+    new Promise((resolve, reject) => {
       passport.authenticate(
         "jwt",
         { session: false },
@@ -41,6 +43,5 @@ const auth =
     })
       .then(() => next())
       .catch((err) => next(err));
-  };
 
 module.exports = auth;

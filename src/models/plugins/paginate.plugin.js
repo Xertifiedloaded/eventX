@@ -1,15 +1,18 @@
 const paginate = (schema) => {
-  schema.statics.paginate = async function (filter, options) {
+  schema.statics.paginate = async function (filter, options = {}) {
     let sort = "";
+
     if (options.sortBy) {
       const sortingCriteria = [];
+
       options.sortBy.split(",").forEach((sortOption) => {
         const [key, order] = sortOption.split(":");
         sortingCriteria.push((order === "desc" ? "-" : "") + key);
       });
+
       sort = sortingCriteria.join(" ");
     } else {
-      sort = "-createdAt";
+      sort = "createdAt"; 
     }
 
     const limit =
@@ -24,28 +27,37 @@ const paginate = (schema) => {
 
     const skip = (page - 1) * limit;
 
-    let docsPromise = this.find(filter).sort(sort).skip(skip).limit(limit);
+    let docsQuery = this.find(filter).sort(sort).skip(skip).limit(limit);
 
-    // ✅ FIXED POPULATE HANDLING
     if (options.populate) {
       if (typeof options.populate === "string") {
         options.populate.split(",").forEach((populateOption) => {
-          docsPromise = docsPromise.populate(populateOption.trim());
+          docsQuery = docsQuery.populate({
+            path: populateOption.trim(),
+            strictPopulate: false,
+          });
         });
       } else if (Array.isArray(options.populate)) {
         options.populate.forEach((pop) => {
-          docsPromise = docsPromise.populate(pop);
+          docsQuery = docsQuery.populate({
+            ...pop,
+            strictPopulate: false,
+          });
         });
       } else if (typeof options.populate === "object") {
-        docsPromise = docsPromise.populate(options.populate);
+        docsQuery = docsQuery.populate({
+          ...options.populate,
+          strictPopulate: false,
+        });
       }
     }
 
     const countPromise = this.countDocuments(filter).exec();
+    const docsPromise = docsQuery.exec();
 
     const [totalResults, results] = await Promise.all([
       countPromise,
-      docsPromise.exec(),
+      docsPromise,
     ]);
 
     const totalPages = Math.ceil(totalResults / limit);
